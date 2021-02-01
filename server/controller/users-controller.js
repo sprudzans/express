@@ -1,13 +1,10 @@
 const { User } = require('../models'),
-    {validationResult} = require('express-validator/check'),
-    bcryptjs = require('bcryptjs');
+    {validationResult} = require('express-validator'),
+    bcryptjs = require('bcryptjs'),
+    validateDecorator = require('../services/validate-decorator'),
+    {createToken} = require('../services/auth-service')
 
 function create(req, res, next){
-    const errors = validationResult(req)
-    if(!errors.isEmpty()){
-        return res.status(422).json({errors: errors.array()})
-    }
-    // res.send(req.body)
     User.findOne({where: {email: req.body.email}})
         .then(user => {
             if (user){
@@ -25,6 +22,17 @@ function create(req, res, next){
         })
 }
 
-module.exports = {
-    create
+function login (req, res, next){
+    const loginUser = req.body;
+    User.login(loginUser).then(createToken).then(token => {
+        res.json({token});
+        next();
+    }).catch(error => {
+        res.status(401).json({error})
+    })
 }
+
+module.exports = validateDecorator({
+    create,
+    login
+})
